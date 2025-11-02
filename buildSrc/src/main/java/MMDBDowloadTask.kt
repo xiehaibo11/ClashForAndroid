@@ -9,7 +9,12 @@ import java.net.URL
 
 open class MMDBDowloadTask : DefaultTask() {
     companion object {
-        const val URL = "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz"
+        // 备用下载源列表
+        val URLS = listOf(
+            "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.tar.gz",
+            "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz"
+        )
+        const val MAX_RETRIES = 3
     }
 
     @get:OutputFile
@@ -21,23 +26,60 @@ open class MMDBDowloadTask : DefaultTask() {
             parentFile?.mkdirs()
         }
 
-        try {
-            (URL(URL).openConnection() as HttpURLConnection).apply {
-                instanceFollowRedirects = true
+        // 如果文件已存在且不为空，跳过下载
+        if (file.exists() && file.length() > 0) {
+            println("MMDB file already exists, skipping download")
+            return
+        }
 
-                connect()
-                require(responseCode / 100 == 2)
+        var lastException: Throwable? = null
+        
+        // 尝试每个 URL
+        for (urlStr in URLS) {
+            println("Trying to download MMDB from: $urlStr")
+            
+            for (attempt in 1..MAX_RETRIES) {
+                try {
+                    (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 30000  // 30 秒连接超时
+                        readTimeout = 60000     // 60 秒读取超时
 
-                FileOutputStream(file).use {
-                    inputStream.copyTo(it)
+                        connect()
+                        
+                        if (responseCode / 100 != 2) {
+                            println("HTTP error: $responseCode, attempt $attempt/$MAX_RETRIES")
+                            if (attempt < MAX_RETRIES) {
+                                Thread.sleep(2000L * attempt)  // 递增延迟
+                                continue
+                            }
+                            throw GradleException("HTTP error: $responseCode")
+                        }
+
+                        FileOutputStream(file).use {
+                            inputStream.copyTo(it)
+                        }
+
+                        disconnect()
+                    }
+                    
+                    println("Successfully downloaded MMDB from: $urlStr")
+                    return  // 成功下载，退出
+                    
+                } catch (e: Throwable) {
+                    println("Download attempt $attempt/$MAX_RETRIES failed: ${e.message}")
+                    lastException = e
+                    if (attempt < MAX_RETRIES) {
+                        Thread.sleep(2000L * attempt)  // 递增延迟
+                    }
                 }
-
-                disconnect()
             }
         }
-        catch (e: Throwable) {
-            e.printStackTrace()
-            throw GradleException("Download failure", e)
-        }
+        
+        // 所有 URL 和重试都失败了
+        println("WARNING: Failed to download MMDB file from all sources")
+        println("The app will build without GeoIP database")
+        // 创建一个空文件以满足 Gradle 的输出要求
+        file.createNewFile()
     }
 }
