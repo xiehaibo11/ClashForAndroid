@@ -40,7 +40,7 @@ func handleQueryGeneral(client *net.UnixConn) {
 	payload.Ports.Redirect = ports.RedirPort
 
 	if httpListener != nil {
-		addr := httpListener.Addr().String()
+		addr := httpListener.Address()
 
 		_, port, _ := net.SplitHostPort(addr)
 		p, _ := strconv.Atoi(port)

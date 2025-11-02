@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/log"
-	"github.com/metacubex/mihomo/tunnel"
+	"github.com/metacubex/mihomo/tunnel/statistic"
 )
 
 func handlePullTrafficEvent(client *net.UnixConn) {
 	trafficExit := make(chan int)
 	ticker := time.NewTicker(time.Second)
 
-	traffic := tunnel.DefaultManager
+	traffic := statistic.DefaultManager
 	buf := &bytes.Buffer{}
 
 	defer ticker.Stop()
@@ -63,7 +63,7 @@ func handlePullBandwidthEvent(client *net.UnixConn) {
 	bandWidthExit := make(chan int)
 	ticker := time.NewTicker(time.Second)
 
-	mgr := tunnel.DefaultManager
+	mgr := statistic.DefaultManager
 	buf := &bytes.Buffer{}
 
 	defer ticker.Stop()
@@ -133,9 +133,8 @@ func handlePullLogEvent(client *net.UnixConn) {
 
 	for {
 		select {
-		case elm := <-subseribe:
+		case msg := <-subseribe:
 			buf.Reset()
-			msg := elm.(*log.Event)
 
 			var payload struct {
 				Level   int    `json:"level"`
