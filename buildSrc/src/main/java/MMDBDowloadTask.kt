@@ -38,7 +38,11 @@ open class MMDBDowloadTask : DefaultTask() {
         for (urlStr in URLS) {
             println("Trying to download MMDB from: $urlStr")
             
-            for (attempt in 1..MAX_RETRIES) {
+            var attempt = 0
+            while (attempt < MAX_RETRIES) {
+                attempt++
+                var success = false
+                
                 try {
                     (URL(urlStr).openConnection() as HttpURLConnection).apply {
                         instanceFollowRedirects = true
@@ -49,10 +53,6 @@ open class MMDBDowloadTask : DefaultTask() {
                         
                         if (responseCode / 100 != 2) {
                             println("HTTP error: $responseCode, attempt $attempt/$MAX_RETRIES")
-                            if (attempt < MAX_RETRIES) {
-                                Thread.sleep(2000L * attempt)  // 递增延迟
-                                continue
-                            }
                             throw GradleException("HTTP error: $responseCode")
                         }
 
@@ -69,6 +69,7 @@ open class MMDBDowloadTask : DefaultTask() {
                 } catch (e: Throwable) {
                     println("Download attempt $attempt/$MAX_RETRIES failed: ${e.message}")
                     lastException = e
+                    
                     if (attempt < MAX_RETRIES) {
                         Thread.sleep(2000L * attempt)  // 递增延迟
                     }
