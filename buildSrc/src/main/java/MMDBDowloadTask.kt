@@ -1,5 +1,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.io.FileOutputStream
@@ -11,6 +12,7 @@ open class MMDBDowloadTask : DefaultTask() {
         const val URL = "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz"
     }
 
+    @get:OutputFile
     var output: String = ""
 
     @TaskAction

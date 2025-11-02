@@ -4,7 +4,8 @@ import android.os.Parcel
 import android.os.Parcelable
 import com.github.kr328.clash.core.serialization.Parcels
 import kotlinx.serialization.*
-import kotlinx.serialization.internal.StringDescriptor
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
 
 @Serializable
 data class LogEvent(val level: Level, val message: String, val time: Long = System.currentTimeMillis()) :
@@ -38,8 +39,8 @@ data class LogEvent(val level: Level, val message: String, val time: Long = Syst
     }
 
     class LevelSerializer : KSerializer<Level> {
-        override val descriptor: SerialDescriptor
-            get() = StringDescriptor
+        override val descriptor: SerialDescriptor =
+            PrimitiveSerialDescriptor("Level", PrimitiveKind.INT)
 
         override fun deserialize(decoder: Decoder): Level {
             return when (val value = decoder.decodeInt()) {

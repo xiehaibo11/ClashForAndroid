@@ -9,8 +9,8 @@ import com.github.kr328.clash.core.event.SpeedEvent
 import com.github.kr328.clash.core.model.*
 import com.github.kr328.clash.core.utils.Log
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
-import kotlinx.serialization.stringify
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import java.io.File
 import java.io.FileDescriptor
 import java.io.IOException
@@ -38,6 +38,11 @@ class Clash(
 
         const val DEFAULT_URL_TEST_TIMEOUT = 5000
         const val DEFAULT_URL_TEST_URL = "https://www.gstatic.com/generate_204"
+        
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
     }
 
     val process = ClashProcess(context, clashDir, controllerPath, listener)
@@ -51,15 +56,10 @@ class Clash(
     fun loadProfile(file: File, selected: Map<String, String>): List<String> {
         return runControl(COMMAND_PROFILE_RELOAD) { _, input, output ->
             output.writeString(
-                Json(JsonConfiguration.Stable)
-                    .stringify(
-                        LoadProfilePacket.Request.serializer(),
-                        LoadProfilePacket.Request(file.absolutePath, selected)
-                    )
+                json.encodeToString(LoadProfilePacket.Request(file.absolutePath, selected))
             )
 
-            val result = Json(JsonConfiguration.Stable)
-                .parse(LoadProfilePacket.Response.serializer(), input.readString())
+            val result = json.decodeFromString<LoadProfilePacket.Response>(input.readString())
 
             if (result.error.isNotEmpty()) {
                 throw IOException(result.error)
@@ -72,7 +72,7 @@ class Clash(
     fun queryGeneral(): GeneralPacket {
         return runCatching {
             runControl(COMMAND_QUERY_GENERAL) { _, input, _ ->
-                Json(JsonConfiguration.Stable).parse(GeneralPacket.serializer(), input.readString())
+                json.decodeFromString<GeneralPacket>(input.readString())
             }
         }.getOrDefault(
             GeneralPacket(
@@ -85,26 +85,17 @@ class Clash(
     fun queryProxies(): RawProxyPacket {
         return runControl(COMMAND_QUERY_PROXIES) { _, input, _ ->
             val data = input.readString()
-
-            Json(JsonConfiguration.Stable.copy(strictMode = false))
-                .parse(RawProxyPacket.serializer(), data)
+            json.decodeFromString<RawProxyPacket>(data)
         }
     }
 
     fun setSelectProxy(key: String, value: String) {
         runControl(COMMAND_SET_PROXY) { _, input, output ->
             output.writeString(
-                Json(JsonConfiguration.Stable)
-                    .stringify(
-                        SetProxyPacket.Request.serializer(),
-                        SetProxyPacket.Request(key, value)
-                    )
+                json.encodeToString(SetProxyPacket.Request(key, value))
             )
 
-            val response = Json(JsonConfiguration.Stable).parse(
-                SetProxyPacket.Response.serializer(),
-                input.readString()
-            )
+            val response = json.decodeFromString<SetProxyPacket.Response>(input.readString())
 
             if (response.error.isNotEmpty())
                 throw IOException(response.error)
@@ -116,12 +107,7 @@ class Clash(
             initial(socket)
 
             while (!Thread.currentThread().isInterrupted) {
-                callback(
-                    Json(JsonConfiguration.Stable).parse(
-                        SpeedEvent.serializer(),
-                        input.readString()
-                    )
-                )
+                callback(json.decodeFromString<SpeedEvent>(input.readString()))
             }
         }
     }
@@ -131,12 +117,7 @@ class Clash(
             initial(socket)
 
             while (!Thread.currentThread().isInterrupted) {
-                callback(
-                    Json(JsonConfiguration.Stable).parse(
-                        LogEvent.serializer(),
-                        input.readString()
-                    )
-                )
+                callback(json.decodeFromString<LogEvent>(input.readString()))
             }
         }
     }
@@ -146,29 +127,25 @@ class Clash(
             initial(socket)
 
             while (!Thread.currentThread().isInterrupted) {
-                callback(
-                    Json(JsonConfiguration.Stable).parse(
-                        BandwidthEvent.serializer(),
-                        input.readString()
-                    )
-                )
+                callback(json.decodeFromString<BandwidthEvent>(input.readString()))
             }
         }
     }
 
     fun startUrlTest(proxies: List<String>, callback: (String, Long) -> Unit) {
         runControl(COMMAND_URL_TEST) { _, input, output ->
-            output.writeString(Json(JsonConfiguration.Stable)
-                .stringify(UrlTestPacket.Request.serializer(),
-                    UrlTestPacket.Request(proxies, DEFAULT_URL_TEST_TIMEOUT, DEFAULT_URL_TEST_URL)))
+            output.writeString(
+                json.encodeToString(
+                    UrlTestPacket.Request(proxies, DEFAULT_URL_TEST_TIMEOUT, DEFAULT_URL_TEST_URL)
+                )
+            )
 
             while ( true ) {
                 val data = input.readString()
                 if ( data.isEmpty() )
                     return@runControl
 
-                val response = Json(JsonConfiguration.Stable)
-                    .parse(UrlTestPacket.Response.serializer(), data)
+                val response = json.decodeFromString<UrlTestPacket.Response>(data)
 
                 callback(response.name, response.delay)
             }

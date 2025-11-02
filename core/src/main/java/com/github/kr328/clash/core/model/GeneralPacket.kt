@@ -4,7 +4,8 @@ import android.os.Parcel
 import android.os.Parcelable
 import com.github.kr328.clash.core.serialization.Parcels
 import kotlinx.serialization.*
-import kotlinx.serialization.internal.StringDescriptor
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
 import java.lang.IllegalArgumentException
 
 @Serializable
@@ -24,8 +25,8 @@ data class GeneralPacket(val ports: Ports, val mode: Mode) : Parcelable {
             const val MODE_RULE = 3
         }
 
-        override val descriptor: SerialDescriptor
-            get() = StringDescriptor
+        override val descriptor: SerialDescriptor =
+            PrimitiveSerialDescriptor("Mode", PrimitiveKind.INT)
 
         override fun deserialize(decoder: Decoder): Mode {
             return when ( decoder.decodeInt() ) {

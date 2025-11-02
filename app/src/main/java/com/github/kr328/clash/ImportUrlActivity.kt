@@ -5,12 +5,12 @@ import android.os.Bundle
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.YamlException
 import com.github.kr328.clash.adapter.FormAdapter
 import com.github.kr328.clash.model.ClashProfile
 import com.github.kr328.clash.service.data.ClashProfileEntity
 import com.github.kr328.clash.utils.FileUtils
+import com.github.kr328.clash.utils.SubscriptionConverter
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_import_url.*
 import java.io.FileOutputStream
@@ -89,7 +89,7 @@ class ImportUrlActivity : BaseActivity() {
                         else
                             URL(url.content).openConnection()
 
-                        val data = with (connection) {
+                        val rawData = with (connection) {
                             connectTimeout = DEFAULT_TIMEOUT
                             connect()
 
@@ -98,7 +98,15 @@ class ImportUrlActivity : BaseActivity() {
                             }
                         }
 
-                        Yaml(configuration = YamlConfiguration(strictMode = false)).parse(ClashProfile.serializer(), data)
+                        // 自动检测并转换订阅格式
+                        val data = try {
+                            SubscriptionConverter.convertToClash(rawData)
+                        } catch (e: Exception) {
+                            // 如果转换失败，使用原始数据
+                            rawData
+                        }
+
+                        Yaml.default.decodeFromString(ClashProfile.serializer(), data)
 
                         val cache =
                             FileUtils.generateRandomFile(filesDir.resolve(Constants.PROFILES_DIR), ".yaml")
