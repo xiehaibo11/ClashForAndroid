@@ -65,29 +65,28 @@ afterEvaluate {
 
     def ds = tasks.register("downloadMMDB", MMDBDowloadTask.class) {
         onlyIf {
-            System.currentTimeMillis() - file("$buildDir/intermediates/cache/Country.tar.gz").lastModified() > 24 * 3600 * 1000L
+            def targetFile = file("$buildDir/intermediates/cache/Country.mmdb")
+            !targetFile.exists() || 
+            targetFile.length() == 0 ||
+            System.currentTimeMillis() - targetFile.lastModified() > 24 * 3600 * 1000L
         }
 
-        output = "$buildDir/intermediates/cache/Country.tar.gz"
+        output = "$buildDir/intermediates/cache/Country.mmdb"
     }
 
     def es = tasks.register("extractMMDB", Copy.class) {
         onlyIf {
-            file("$buildDir/intermediates/cache/Country.tar.gz").lastModified() > file("$buildDir/intermediates/dynamic_assets/Country.mmdb").lastModified()
+            def sourceFile = file("$buildDir/intermediates/cache/Country.mmdb")
+            def targetFile = file("$buildDir/intermediates/dynamic_assets/Country.mmdb")
+            sourceFile.exists() && 
+            sourceFile.length() > 0 &&
+            sourceFile.lastModified() > targetFile.lastModified()
         }
 
-        from(tarTree("$buildDir/intermediates/cache/Country.tar.gz")) {
-            include "**/*.mmdb"
+        from("$buildDir/intermediates/cache") {
+            include "Country.mmdb"
         }
-        into "$buildDir/intermediates/cache/mmdb"
-
-        doLast {
-            file("$buildDir/intermediates/dynamic_assets").mkdirs()
-            fileTree("$buildDir/intermediates/cache/mmdb").visit { FileVisitDetails details ->
-                if ( details.path.endsWith("Country.mmdb") )
-                    details.file.renameTo(file("$buildDir/intermediates/dynamic_assets/Country.mmdb"))
-            }
-        }
+        into "$buildDir/intermediates/dynamic_assets"
 
         dependsOn ds
     }

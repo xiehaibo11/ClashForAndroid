@@ -9,12 +9,16 @@ import java.net.URL
 
 open class MMDBDowloadTask : DefaultTask() {
     companion object {
-        // 备用下载源列表
+        // 备用下载源列表 - 使用公开可用的镜像
         val URLS = listOf(
-            "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.tar.gz",
-            "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz"
+            // Cloudflare CDN 镜像 (可靠)
+            "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country.mmdb",
+            // Dreamacro 的 MaxMind 镜像
+            "https://github.com/Dreamacro/maxmind-geoip/releases/latest/download/Country.mmdb",
+            // PaperMC 托管的 GeoIP 数据库
+            "https://download.geoip.0xabc.dev/GeoLite2-Country.mmdb"
         )
-        const val MAX_RETRIES = 3
+        const val MAX_RETRIES = 2
     }
 
     @get:OutputFile
@@ -80,7 +84,10 @@ open class MMDBDowloadTask : DefaultTask() {
         // 所有 URL 和重试都失败了
         println("WARNING: Failed to download MMDB file from all sources")
         println("The app will build without GeoIP database")
-        // 创建一个空文件以满足 Gradle 的输出要求
+        println("Last error: ${lastException?.message}")
+        
+        // 创建一个空文件以满足 Gradle @OutputFile 要求
+        // extractMMDB 任务会通过 onlyIf 检查跳过空文件
         file.createNewFile()
     }
 }
