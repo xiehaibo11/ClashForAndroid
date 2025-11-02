@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Dreamacro/clash/log"
-	"github.com/Dreamacro/clash/proxy"
-	"github.com/Dreamacro/clash/tunnel"
-
-	A "github.com/Dreamacro/clash/adapters/outbound"
+	"github.com/metacubex/mihomo/adapter"
+	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/listener"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/tunnel"
 )
 
 const (
@@ -32,8 +32,8 @@ func handleQueryGeneral(client *net.UnixConn) {
 		Mode int `json:"mode"`
 	}
 
-	mode := tunnel.Instance().Mode()
-	ports := proxy.GetPorts()
+	mode := tunnel.Mode()
+	ports := listener.GetPorts()
 
 	payload.Ports.Http = ports.Port
 	payload.Ports.Socks = ports.SocksPort
@@ -66,14 +66,14 @@ func handleQueryGeneral(client *net.UnixConn) {
 }
 
 func handleQueryProxies(client *net.UnixConn) {
-	proxies := tunnel.Instance().Proxies()
+	proxies := tunnel.Proxies()
 
 	var root struct {
 		Mode    string                 `json:"mode"`
 		Proxies map[string]interface{} `json:"proxies"`
 	}
 
-	root.Mode = tunnel.Instance().Mode().String()
+	root.Mode = tunnel.Mode().String()
 	root.Proxies = make(map[string]interface{})
 
 	for k, p := range proxies {
@@ -148,7 +148,7 @@ func handleUrlTest(client *net.UnixConn) {
 		Delay int    `json:"delay"`
 	}
 
-	proxies := tunnel.Instance().Proxies()
+	proxies := tunnel.Proxies()
 	channel := make(chan *Response, len(request.Proxies))
 
 	for _, p := range request.Proxies {
@@ -163,7 +163,7 @@ func handleUrlTest(client *net.UnixConn) {
 
 			defer cancel()
 
-			delay, err := proxies[p].URLTest(ctx, request.URL)
+			delay, err := proxies[p].URLTest(ctx, request.URL, nil)
 			if err != nil {
 				channel <- nil
 				return
@@ -192,7 +192,7 @@ func handleUrlTest(client *net.UnixConn) {
 }
 
 func setProxySelect(name, selected string) error {
-	proxies := tunnel.Instance().Proxies()
+	proxies := tunnel.Proxies()
 
 	p := proxies[name]
 
@@ -200,12 +200,12 @@ func setProxySelect(name, selected string) error {
 		return errors.New("Unknown proxy " + name)
 	}
 
-	proxy, ok := p.(*A.Proxy)
+	proxy, ok := p.(*adapter.Proxy)
 	if !ok {
 		return errors.New("Invalid proxy " + name)
 	}
 
-	selector, ok := proxy.ProxyAdapter.(*A.Selector)
+	selector, ok := proxy.ProxyAdapter.(*outboundgroup.Selector)
 	if !ok {
 		return errors.New("Not selector")
 	}

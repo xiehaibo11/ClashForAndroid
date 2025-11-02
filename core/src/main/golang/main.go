@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Dreamacro/clash/constant"
+	C "github.com/metacubex/mihomo/constant"
 
 	"github.com/kr328/cfa/profile"
 	"github.com/kr328/cfa/server"
@@ -22,7 +22,7 @@ func main() {
 	os.Stderr = os.Stdout
 
 	if cwd, err := os.Getwd(); err == nil {
-		constant.SetHomeDir(cwd)
+		C.SetHomeDir(cwd)
 	} else {
 		return
 	}

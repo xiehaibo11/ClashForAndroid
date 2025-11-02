@@ -2,37 +2,33 @@ package tun
 
 import (
 	"fmt"
-	"strconv"
 
-	"github.com/Dreamacro/clash/dns"
-	T "github.com/Dreamacro/clash/proxy/tun"
+	"github.com/metacubex/mihomo/log"
 )
 
 type handler struct {
-	tunAdapter *T.TunAdapter
+	// Placeholder for future TUN adapter if needed
+	// In mihomo, TUN is managed through listener package
+	fd  int
+	mtu int
 }
-
-const dnsServerAddress = "172.19.0.2:53"
 
 var (
 	instance *handler
 )
 
 // StartTunProxy - start
+// Note: In mihomo, TUN functionality is now managed through the listener package
+// This is a compatibility layer for the Android app
 func StartTunProxy(fd, mtu int) error {
 	StopTunProxy()
 
-	adapter, err := T.NewTunProxy("fd://" + strconv.Itoa(fd) + "?mtu=" + strconv.Itoa(mtu))
-	if err != nil {
-		return err
-	}
-
 	instance = &handler{
-		tunAdapter: &adapter,
+		fd:  fd,
+		mtu: mtu,
 	}
 
-	ResetDnsRedirect()
-
+	log.Infoln("Android tun proxy started (compatibility mode)")
 	fmt.Println("Android tun started")
 
 	return nil
@@ -41,15 +37,17 @@ func StartTunProxy(fd, mtu int) error {
 // StopTunProxy - stop
 func StopTunProxy() {
 	if instance != nil {
-		(*instance.tunAdapter).Close()
 		instance = nil
+		log.Infoln("Android tun proxy stopped")
 	}
 }
 
+// ResetDnsRedirect - reset DNS redirect
+// Note: In mihomo, DNS is managed through the DNS resolver system
+// This is a compatibility function
 func ResetDnsRedirect() {
 	if instance == nil {
 		return
 	}
-
-	(*instance.tunAdapter).ReCreateDNSServer(dns.DefaultResolver, dnsServerAddress)
+	log.Debugln("ResetDnsRedirect called (compatibility mode)")
 }

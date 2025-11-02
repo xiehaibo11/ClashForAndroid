@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/Dreamacro/clash/log"
+	"github.com/metacubex/mihomo/log"
 	"github.com/kr328/cfa/tun"
 	"golang.org/x/sys/unix"
 )
