@@ -41,6 +41,12 @@ jobs:
         echo "ndk.dir=$ANDROID_HOME/ndk/26.3.11579264" >> local.properties
         cat local.properties
         
+    - name: Update Go modules
+      run: |
+        cd core/src/main/golang
+        go mod tidy
+        go mod download
+        
     - name: Cache Gradle packages
       uses: actions/cache@v4
       with:
